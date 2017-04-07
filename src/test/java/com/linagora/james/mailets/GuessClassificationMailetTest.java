@@ -23,7 +23,6 @@ import static org.mockito.Mockito.when;
 
 import java.util.Properties;
 
-import javax.mail.Message.RecipientType;
 import javax.mail.MessagingException;
 import javax.mail.Session;
 import javax.mail.internet.InternetAddress;
@@ -34,6 +33,7 @@ import org.apache.mailet.MailAddress;
 import org.apache.mailet.MailetException;
 import org.apache.mailet.base.test.FakeMail;
 import org.apache.mailet.base.test.FakeMailetConfig;
+import org.apache.mailet.base.test.MimeMessageBuilder;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -197,12 +197,13 @@ public class GuessClassificationMailetTest {
         testee.init(config);
         testee.setUUIDGenerator(new FakeUUIDGenerator());
 
-        MimeMessage message = new MimeMessage(Session.getDefaultInstance(new Properties()));
-        message.addFrom(new InternetAddress[] { new InternetAddress("from@james.org", "From") });
-        message.setRecipients(RecipientType.TO, new InternetAddress[] { new InternetAddress("to@james.org") });
-        message.setRecipients(RecipientType.CC, new InternetAddress[] { new InternetAddress("cc@james.org") });
-        message.setSubject("my subject");
-        message.setContent("this is my body", "text/plain");
+        MimeMessage message = MimeMessageBuilder.mimeMessageBuilder()
+            .addFrom(new InternetAddress("from@james.org", "From"))
+            .addToRecipient("to@james.org")
+            .addCcRecipient("cc@james.org")
+            .setSubject("my subject")
+            .setText("this is my body")
+            .build();
         FakeMail mail = FakeMail.from(message);
         mail.setRecipients(ImmutableList.of(new MailAddress("to@james.org"), new MailAddress("cc@james.org")));
 
