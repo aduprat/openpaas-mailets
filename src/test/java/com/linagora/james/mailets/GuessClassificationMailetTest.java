@@ -20,6 +20,7 @@ package com.linagora.james.mailets;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson;
 
 import java.util.Properties;
 
@@ -206,7 +207,9 @@ public class GuessClassificationMailetTest {
 
         testee.service(mail);
 
-        assertThat(message.getHeader(GuessClassificationMailet.HEADER_NAME_DEFAULT_VALUE))
-            .contains(response);
+        String[] header = message.getHeader(GuessClassificationMailet.HEADER_NAME_DEFAULT_VALUE);
+        assertThat(header).hasSize(1);
+        assertThatJson(header[0])
+            .isEqualTo(response);
     }
 }

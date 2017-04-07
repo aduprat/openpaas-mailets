@@ -17,7 +17,7 @@
  *******************************************************************************/
 package com.linagora.james.mailets.json;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson;
 
 import javax.mail.internet.InternetAddress;
 import javax.mail.internet.MimeMessage;
@@ -53,7 +53,7 @@ public class MailParserTest {
         MailParser testee = new MailParser(mail, new FakeUUIDGenerator());
         String jsonAsString = testee.toJsonAsString();
         
-        assertThat(jsonAsString).isEqualTo("{\"messageId\":\"524e4f85-2d2f-4927-ab98-bd7a2f689773\"," +
+        assertThatJson(jsonAsString).isEqualTo("{\"messageId\":\"524e4f85-2d2f-4927-ab98-bd7a2f689773\"," +
                 "\"from\":[]," +
                 "\"recipients\":{\"to\":[],\"cc\":[],\"bcc\":[]}," +
                 "\"subject\":[\"\"]," +
@@ -74,8 +74,9 @@ public class MailParserTest {
         
         MailParser testee = new MailParser(mail, new FakeUUIDGenerator());
         String jsonAsString = testee.toJsonAsString();
-        
-        assertThat(jsonAsString).isEqualTo("{\"messageId\":\"524e4f85-2d2f-4927-ab98-bd7a2f689773\"," +
+
+        assertThatJson(jsonAsString)
+            .isEqualTo("{\"messageId\":\"524e4f85-2d2f-4927-ab98-bd7a2f689773\"," +
                 "\"from\":[{\"name\":\"From\",\"address\":\"from@james.org\"},{\"name\":null,\"address\":\"from2@james.org\"}]," +
                 "\"recipients\":{\"to\":[{\"name\":null,\"address\":\"to@james.org\"},{\"name\":\"To2\",\"address\":\"to2@james.org\"}]," +
                     "\"cc\":[{\"name\":null,\"address\":\"cc@james.org\"},{\"name\":\"CC2\",\"address\":\"cc2@james.org\"}]," +
@@ -96,8 +97,9 @@ public class MailParserTest {
         
         MailParser testee = new MailParser(mail, new FakeUUIDGenerator());
         String jsonAsString = testee.toJsonAsString();
-        
-        assertThat(jsonAsString).isEqualTo("{\"messageId\":\"524e4f85-2d2f-4927-ab98-bd7a2f689773\"," +
+
+        assertThatJson(jsonAsString)
+            .isEqualTo("{\"messageId\":\"524e4f85-2d2f-4927-ab98-bd7a2f689773\"," +
                 "\"from\":[]," +
                 "\"recipients\":{\"to\":[],\"cc\":[],\"bcc\":[]}," +
                 "\"subject\":[\"\"]," +
@@ -118,8 +120,9 @@ public class MailParserTest {
         
         MailParser testee = new MailParser(mail, new FakeUUIDGenerator());
         String jsonAsString = testee.toJsonAsString();
-        
-        assertThat(jsonAsString).isEqualTo("{\"messageId\":\"524e4f85-2d2f-4927-ab98-bd7a2f689773\"," +
+
+        assertThatJson(jsonAsString)
+            .isEqualTo("{\"messageId\":\"524e4f85-2d2f-4927-ab98-bd7a2f689773\"," +
                 "\"from\":[]," +
                 "\"recipients\":{\"to\":[],\"cc\":[],\"bcc\":[]}," +
                 "\"subject\":[\"\"]," +
@@ -140,8 +143,9 @@ public class MailParserTest {
         
         MailParser testee = new MailParser(mail, new FakeUUIDGenerator());
         String jsonAsString = testee.toJsonAsString();
-        
-        assertThat(jsonAsString).isEqualTo("{\"messageId\":\"524e4f85-2d2f-4927-ab98-bd7a2f689773\"," +
+
+        assertThatJson(jsonAsString)
+            .isEqualTo("{\"messageId\":\"524e4f85-2d2f-4927-ab98-bd7a2f689773\"," +
                 "\"from\":[]," +
                 "\"recipients\":{\"to\":[],\"cc\":[],\"bcc\":[]}," +
                 "\"subject\":[\"\"]," +
