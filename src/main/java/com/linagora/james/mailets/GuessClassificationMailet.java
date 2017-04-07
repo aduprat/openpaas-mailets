@@ -83,7 +83,16 @@ public class GuessClassificationMailet extends GenericMailet {
     
     @VisibleForTesting String serviceUrl;
     @VisibleForTesting String headerName;
-    private UUIDGenerator uuidGenerator = new UUIDGenerator();
+    private final UUIDGenerator uuidGenerator;
+
+    public GuessClassificationMailet() {
+        this(new UUIDGenerator());
+    }
+
+    @VisibleForTesting
+    GuessClassificationMailet(UUIDGenerator uuidGenerator) {
+        this.uuidGenerator = uuidGenerator;
+    }
 
     @Override
     public void init() throws MessagingException {
@@ -105,10 +114,6 @@ public class GuessClassificationMailet extends GenericMailet {
     @Override
     public String getMailetInfo() {
         return "GuessClassificationMailet Mailet";
-    }
-
-    @VisibleForTesting void setUUIDGenerator(UUIDGenerator uuidGenerator) {
-        this.uuidGenerator = uuidGenerator;
     }
 
     @Override

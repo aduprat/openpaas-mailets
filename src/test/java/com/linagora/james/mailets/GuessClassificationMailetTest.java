@@ -64,7 +64,7 @@ public class GuessClassificationMailetTest {
         FakeMailetConfig config = FakeMailetConfig.builder()
                 .build();
         
-        GuessClassificationMailet testee = new GuessClassificationMailet();
+        GuessClassificationMailet testee = new GuessClassificationMailet(new FakeUUIDGenerator());
         testee.init(config);
     }
 
@@ -193,9 +193,8 @@ public class GuessClassificationMailetTest {
         FakeMailetConfig config = FakeMailetConfig.builder()
                 .setProperty("serviceUrl", "http://localhost:" + mockServerRule.getPort() + "/email/classification/predict")
                 .build();
-        GuessClassificationMailet testee = new GuessClassificationMailet();
+        GuessClassificationMailet testee = new GuessClassificationMailet(new FakeUUIDGenerator());
         testee.init(config);
-        testee.setUUIDGenerator(new FakeUUIDGenerator());
 
         MimeMessage message = MimeMessageBuilder.mimeMessageBuilder()
             .addFrom(new InternetAddress("from@james.org", "From"))
