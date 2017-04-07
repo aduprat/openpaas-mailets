@@ -185,10 +185,8 @@ public class GuessClassificationMailetTest {
                                "\"bcc\":[]}," +
                            "\"subject\":[\"my subject\"]," +
                            "\"textBody\":\"this is my body\"}"),
-                   Times.exactly(1)
-            )
-            .respond(HttpResponse.response(response)
-            );
+                   Times.exactly(1))
+            .respond(HttpResponse.response(response));
 
         FakeMailetConfig config = FakeMailetConfig.builder()
                 .setProperty("serviceUrl", "http://localhost:" + mockServerRule.getPort() + "/email/classification/predict")

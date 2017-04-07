@@ -123,14 +123,13 @@ public class GuessClassificationMailet extends GenericMailet {
     }
 
     private Optional<String> getClassificationGuess(Mail mail) {
-        try (CloseableHttpClient httpClient = HttpClients.createDefault();) {
+        try (CloseableHttpClient httpClient = HttpClients.createDefault()) {
             HttpPost post = new HttpPost(serviceUrlWithQueryParameters(mail.getRecipients()));
             post.addHeader("Content-Type", "application/json");
             post.setEntity(new StringEntity(asJson(mail)));
             
             HttpEntity entity = httpClient.execute(post).getEntity();
             return Optional.ofNullable(IOUtils.toString(entity.getContent(), Charsets.UTF_8));
-            
         } catch (Exception e) {
             LOGGER.error("Error occured while contacting classification guess service");
             return Optional.empty();
