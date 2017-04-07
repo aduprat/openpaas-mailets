@@ -91,7 +91,7 @@ public class GuessClassificationMailet extends GenericMailet {
     static final String TIMEOUT_IN_MS = "timeoutInMs";
     static final String THREAD_COUNT = "threadCount";
     static final String HEADER_NAME_DEFAULT_VALUE = "X-Classification-Guess";
-    static final int THREAD_COUNT_DEFAULT_VALUE = 2;
+    private static final int THREAD_COUNT_DEFAULT_VALUE = 2;
     
     @VisibleForTesting String serviceUrl;
     @VisibleForTesting String headerName;
