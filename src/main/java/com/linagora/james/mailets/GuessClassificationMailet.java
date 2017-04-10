@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Collection;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -29,6 +30,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.function.Consumer;
+import java.util.function.Function;
 
 import javax.mail.MessagingException;
 import javax.mail.internet.MimeMessage;
@@ -43,14 +46,21 @@ import org.apache.http.impl.client.HttpClients;
 import org.apache.mailet.Mail;
 import org.apache.mailet.MailAddress;
 import org.apache.mailet.MailetException;
+import org.apache.mailet.PerRecipientHeaders;
 import org.apache.mailet.base.GenericMailet;
 import org.apache.mailet.base.MailetUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.github.fge.lambdas.Throwing;
+import com.github.fge.lambdas.consumers.ConsumerChainer;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Charsets;
 import com.google.common.base.Strings;
+import com.google.common.collect.ImmutableMap;
+import com.linagora.james.mailets.json.ClassificationGuess;
 import com.linagora.james.mailets.json.MailParser;
 import com.linagora.james.mailets.json.UUIDGenerator;
 
@@ -97,6 +107,8 @@ public class GuessClassificationMailet extends GenericMailet {
     @VisibleForTesting String headerName;
     @VisibleForTesting Optional<Integer> timeoutInMs;
     private final UUIDGenerator uuidGenerator;
+    private final ObjectMapper objectMapper;
+    private final TypeReference<Map<String, ClassificationGuess>> typeReference;
     private ExecutorService executorService;
 
     public GuessClassificationMailet() {
@@ -107,6 +119,8 @@ public class GuessClassificationMailet extends GenericMailet {
     GuessClassificationMailet(UUIDGenerator uuidGenerator) {
         this.uuidGenerator = uuidGenerator;
         this.executorService = Executors.newFixedThreadPool(2);
+        this.typeReference = new TypeReference<Map<String, ClassificationGuess>>() {};
+        this.objectMapper = new ObjectMapper();
     }
 
     @Override
@@ -155,7 +169,7 @@ public class GuessClassificationMailet extends GenericMailet {
         try {
             Future<Optional<String>> predictionFuture = executorService.submit(() -> getClassificationGuess(mail));
             awaitTimeout(predictionFuture)
-                .ifPresent(classificationGuess -> addHeader(mail, classificationGuess));
+                .ifPresent(classificationGuess -> addHeaders(mail, classificationGuess));
         } catch (Exception e) {
             LOGGER.error("Exception while calling Classification API", e);
         }
@@ -201,12 +215,28 @@ public class GuessClassificationMailet extends GenericMailet {
         return new MailParser(mail, uuidGenerator).toJsonAsString();
     }
 
-    @VisibleForTesting void addHeader(Mail mail, String classificationGuess) {
-        try {
-            MimeMessage message = mail.getMessage();
-            message.addHeader(headerName, classificationGuess);
-        } catch (MessagingException e) {
-            LOGGER.error("Error occured while adding classification guess header", e);
-        }
+    @VisibleForTesting void addHeaders(Mail mail, String classificationGuess) {
+        Function<String, Map<String, ClassificationGuess>> function = Throwing
+            .<String, Map<String, ClassificationGuess>>function(
+                s -> objectMapper.readValue(s, typeReference))
+            .fallbackTo(s -> {
+                LOGGER.error("Error occurred while deserializing classification guess");
+                return ImmutableMap.of();
+            });
+
+        Consumer<Map.Entry<String, ClassificationGuess>> headerAdder = Throwing
+            .<Map.Entry<String, ClassificationGuess>>consumer(entry -> mail.addSpecificHeaderForRecipient(
+                PerRecipientHeaders.Header.builder()
+                    .name(headerName)
+                    .value(objectMapper.writeValueAsString(entry.getValue()))
+                    .build(),
+                new MailAddress(entry.getKey())))
+            .orTryWith(e -> LOGGER.error("Failed serializing " + headerName + " for " + e));
+
+        Map<String, ClassificationGuess> predictions = Optional.ofNullable(classificationGuess)
+            .map(function)
+            .orElse(ImmutableMap.of());
+
+        predictions.entrySet().forEach(headerAdder);
     }
 }
