@@ -17,18 +17,13 @@
  *******************************************************************************/
 package com.linagora.james.mailets.json;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson;
 
-import java.util.Properties;
-
-import javax.mail.Message.RecipientType;
-import javax.mail.Session;
 import javax.mail.internet.InternetAddress;
-import javax.mail.internet.MimeBodyPart;
 import javax.mail.internet.MimeMessage;
-import javax.mail.internet.MimeMultipart;
 
 import org.apache.mailet.base.test.FakeMail;
+import org.apache.mailet.base.test.MimeMessageBuilder;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -58,7 +53,7 @@ public class MailParserTest {
         MailParser testee = new MailParser(mail, new FakeUUIDGenerator());
         String jsonAsString = testee.toJsonAsString();
         
-        assertThat(jsonAsString).isEqualTo("{\"messageId\":\"524e4f85-2d2f-4927-ab98-bd7a2f689773\"," +
+        assertThatJson(jsonAsString).isEqualTo("{\"messageId\":\"524e4f85-2d2f-4927-ab98-bd7a2f689773\"," +
                 "\"from\":[]," +
                 "\"recipients\":{\"to\":[],\"cc\":[],\"bcc\":[]}," +
                 "\"subject\":[\"\"]," +
@@ -67,19 +62,21 @@ public class MailParserTest {
 
     @Test
     public void toJsonAsStringShouldParseWhenSimpleTextMessage() throws Exception {
-        MimeMessage message = new MimeMessage(Session.getDefaultInstance(new Properties()));
-        message.addFrom(new InternetAddress[] { new InternetAddress("from@james.org", "From"), new InternetAddress("from2@james.org") });
-        message.setRecipients(RecipientType.TO, new InternetAddress[] { new InternetAddress("to@james.org"), new InternetAddress("to2@james.org", "To2") });
-        message.setRecipients(RecipientType.CC, new InternetAddress[] { new InternetAddress("cc@james.org"), new InternetAddress("cc2@james.org", "CC2") });
-        message.setRecipients(RecipientType.BCC, new InternetAddress[] { new InternetAddress("bcc@james.org"), new InternetAddress("bcc2@james.org", "Bcc2"), new InternetAddress("bcc3@james.org") });
-        message.setSubject("my subject");
-        message.setContent("this is my body", "text/plain");
+        MimeMessage message = MimeMessageBuilder.mimeMessageBuilder()
+            .addFrom(new InternetAddress("from@james.org", "From"), new InternetAddress("from2@james.org"))
+            .addToRecipient(new InternetAddress("to@james.org"), new InternetAddress("to2@james.org", "To2"))
+            .addCcRecipient(new InternetAddress("cc@james.org"), new InternetAddress("cc2@james.org", "CC2"))
+            .addBccRecipient(new InternetAddress("bcc@james.org"), new InternetAddress("bcc2@james.org", "Bcc2"), new InternetAddress("bcc3@james.org"))
+            .setSubject("my subject")
+            .setText("this is my body")
+            .build();
         FakeMail mail = FakeMail.from(message);
         
         MailParser testee = new MailParser(mail, new FakeUUIDGenerator());
         String jsonAsString = testee.toJsonAsString();
-        
-        assertThat(jsonAsString).isEqualTo("{\"messageId\":\"524e4f85-2d2f-4927-ab98-bd7a2f689773\"," +
+
+        assertThatJson(jsonAsString)
+            .isEqualTo("{\"messageId\":\"524e4f85-2d2f-4927-ab98-bd7a2f689773\"," +
                 "\"from\":[{\"name\":\"From\",\"address\":\"from@james.org\"},{\"name\":null,\"address\":\"from2@james.org\"}]," +
                 "\"recipients\":{\"to\":[{\"name\":null,\"address\":\"to@james.org\"},{\"name\":\"To2\",\"address\":\"to2@james.org\"}]," +
                     "\"cc\":[{\"name\":null,\"address\":\"cc@james.org\"},{\"name\":\"CC2\",\"address\":\"cc2@james.org\"}]," +
@@ -90,21 +87,19 @@ public class MailParserTest {
 
     @Test
     public void toJsonAsStringShouldReturnTextBodyWhenMultipartAndTextPlain() throws Exception {
-        MimeMessage message = new MimeMessage(Session.getDefaultInstance(new Properties()));
-        
-        MimeMultipart multipart = new MimeMultipart();
-        MimeBodyPart textBody = new MimeBodyPart();
-        textBody.setContent("this is my body", "text/plain");
-        multipart.addBodyPart(textBody);
-        message.setContent(multipart, "multipart/mixed");
-        message.saveChanges();
+        MimeMessage message = MimeMessageBuilder.mimeMessageBuilder()
+            .setMultipartWithBodyParts(MimeMessageBuilder.bodyPartBuilder()
+                .data("this is my body")
+                .build())
+            .build();
 
         FakeMail mail = FakeMail.from(message);
         
         MailParser testee = new MailParser(mail, new FakeUUIDGenerator());
         String jsonAsString = testee.toJsonAsString();
-        
-        assertThat(jsonAsString).isEqualTo("{\"messageId\":\"524e4f85-2d2f-4927-ab98-bd7a2f689773\"," +
+
+        assertThatJson(jsonAsString)
+            .isEqualTo("{\"messageId\":\"524e4f85-2d2f-4927-ab98-bd7a2f689773\"," +
                 "\"from\":[]," +
                 "\"recipients\":{\"to\":[],\"cc\":[],\"bcc\":[]}," +
                 "\"subject\":[\"\"]," +
@@ -113,21 +108,21 @@ public class MailParserTest {
 
     @Test
     public void toJsonAsStringShouldReturnTextBodyWhenMultipartAndTextHtml() throws Exception {
-        MimeMessage message = new MimeMessage(Session.getDefaultInstance(new Properties()));
-        
-        MimeMultipart multipart = new MimeMultipart();
-        MimeBodyPart htmlBody = new MimeBodyPart();
-        htmlBody.setContent("<p>this is my body</p>", "text/html");
-        multipart.addBodyPart(htmlBody);
-        message.setContent(multipart, "multipart/mixed");
-        message.saveChanges();
+        MimeMessage message = MimeMessageBuilder.mimeMessageBuilder()
+            .setMultipartWithBodyParts(
+                MimeMessageBuilder.bodyPartBuilder()
+                    .data("<p>this is my body</p>")
+                    .type("text/html")
+                    .build())
+            .build();
 
         FakeMail mail = FakeMail.from(message);
         
         MailParser testee = new MailParser(mail, new FakeUUIDGenerator());
         String jsonAsString = testee.toJsonAsString();
-        
-        assertThat(jsonAsString).isEqualTo("{\"messageId\":\"524e4f85-2d2f-4927-ab98-bd7a2f689773\"," +
+
+        assertThatJson(jsonAsString)
+            .isEqualTo("{\"messageId\":\"524e4f85-2d2f-4927-ab98-bd7a2f689773\"," +
                 "\"from\":[]," +
                 "\"recipients\":{\"to\":[],\"cc\":[],\"bcc\":[]}," +
                 "\"subject\":[\"\"]," +
@@ -136,22 +131,21 @@ public class MailParserTest {
 
     @Test
     public void toJsonAsStringShouldReturnEmptyTextBodyWhenMultipartAndNoTextPlainPart() throws Exception {
-        MimeMessage message = new MimeMessage(Session.getDefaultInstance(new Properties()));
-        
-        MimeMultipart multipart = new MimeMultipart();
-        MimeBodyPart attachmentBody = new MimeBodyPart();
-        attachmentBody.setContent("attachment".getBytes(), "application/octet-stream");
-        attachmentBody.setDisposition("attachment");
-        multipart.addBodyPart(attachmentBody);
-        message.setContent(multipart, "multipart/mixed");
-        message.saveChanges();
+        MimeMessage message = MimeMessageBuilder.mimeMessageBuilder()
+            .setMultipartWithBodyParts(MimeMessageBuilder.bodyPartBuilder()
+                .disposition("attachment")
+                .data("attachment".getBytes())
+                .type("application/octet-stream")
+                .build())
+            .build();
 
         FakeMail mail = FakeMail.from(message);
         
         MailParser testee = new MailParser(mail, new FakeUUIDGenerator());
         String jsonAsString = testee.toJsonAsString();
-        
-        assertThat(jsonAsString).isEqualTo("{\"messageId\":\"524e4f85-2d2f-4927-ab98-bd7a2f689773\"," +
+
+        assertThatJson(jsonAsString)
+            .isEqualTo("{\"messageId\":\"524e4f85-2d2f-4927-ab98-bd7a2f689773\"," +
                 "\"from\":[]," +
                 "\"recipients\":{\"to\":[],\"cc\":[],\"bcc\":[]}," +
                 "\"subject\":[\"\"]," +

@@ -19,6 +19,7 @@ package com.linagora.james.mailets.json;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 
 import javax.mail.Address;
 import javax.mail.internet.InternetAddress;
@@ -29,9 +30,12 @@ import com.google.common.collect.ImmutableList;
 public class Emailers {
 
     public static List<Emailer> from(Address[] addresses) {
-        if (addresses == null) {
-            return ImmutableList.of();
-        }
+        return Optional.ofNullable(addresses)
+            .map(Emailers::transformAddresses)
+            .orElse(ImmutableList.of());
+    }
+
+    private static ImmutableList<Emailer> transformAddresses(Address[] addresses) {
         return Arrays.stream(addresses)
             .map(InternetAddress.class::cast)
             .map(Emailer::from)

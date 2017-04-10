@@ -17,13 +17,14 @@
  *******************************************************************************/
 package com.linagora.james.mailets;
 
+import static com.linagora.james.mailets.GuessClassificationMailet.HEADER_NAME_DEFAULT_VALUE;
+import static net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.util.Properties;
 
-import javax.mail.Message.RecipientType;
 import javax.mail.MessagingException;
 import javax.mail.Session;
 import javax.mail.internet.InternetAddress;
@@ -32,18 +33,22 @@ import javax.mail.internet.MimeMessage;
 import org.apache.mailet.Mail;
 import org.apache.mailet.MailAddress;
 import org.apache.mailet.MailetException;
+import org.apache.mailet.PerRecipientHeaders;
 import org.apache.mailet.base.test.FakeMail;
 import org.apache.mailet.base.test.FakeMailetConfig;
+import org.apache.mailet.base.test.MimeMessageBuilder;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.mockserver.client.server.MockServerClient;
 import org.mockserver.junit.MockServerRule;
 import org.mockserver.matchers.Times;
+import org.mockserver.model.HttpCallback;
 import org.mockserver.model.HttpRequest;
 import org.mockserver.model.HttpResponse;
 import org.mockserver.model.Parameter;
 
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.linagora.james.mailets.json.FakeUUIDGenerator;
 
@@ -64,7 +69,7 @@ public class GuessClassificationMailetTest {
         FakeMailetConfig config = FakeMailetConfig.builder()
                 .build();
         
-        GuessClassificationMailet testee = new GuessClassificationMailet();
+        GuessClassificationMailet testee = new GuessClassificationMailet(new FakeUUIDGenerator());
         testee.init(config);
     }
 
@@ -74,7 +79,7 @@ public class GuessClassificationMailetTest {
         expectedException.expectMessage("'serviceUrl' is mandatory");
 
         FakeMailetConfig config = FakeMailetConfig.builder()
-                .setProperty("serviceUrl", "")
+                .setProperty(GuessClassificationMailet.SERVICE_URL, "")
                 .build();
         
         GuessClassificationMailet testee = new GuessClassificationMailet();
@@ -87,8 +92,8 @@ public class GuessClassificationMailetTest {
         expectedException.expectMessage("'headerName' is mandatory");
 
         FakeMailetConfig config = FakeMailetConfig.builder()
-                .setProperty("serviceUrl", "my url")
-                .setProperty("headerName", "")
+                .setProperty(GuessClassificationMailet.SERVICE_URL, "my url")
+                .setProperty(GuessClassificationMailet.HEADER_NAME, "")
                 .build();
         
         GuessClassificationMailet testee = new GuessClassificationMailet();
@@ -96,9 +101,113 @@ public class GuessClassificationMailetTest {
     }
 
     @Test
+    public void initShouldThrowWhenTimeOutInMsIsEmpty() throws Exception {
+        expectedException.expect(MessagingException.class);
+
+        FakeMailetConfig config = FakeMailetConfig.builder()
+            .setProperty(GuessClassificationMailet.SERVICE_URL, "my url")
+            .setProperty(GuessClassificationMailet.TIMEOUT_IN_MS, "")
+            .build();
+
+        GuessClassificationMailet testee = new GuessClassificationMailet();
+        testee.init(config);
+    }
+
+    @Test
+    public void initShouldThrowWhenTimeOutInMsIsInvalid() throws Exception {
+        expectedException.expect(MessagingException.class);
+
+        FakeMailetConfig config = FakeMailetConfig.builder()
+            .setProperty(GuessClassificationMailet.SERVICE_URL, "my url")
+            .setProperty(GuessClassificationMailet.TIMEOUT_IN_MS, "invalid")
+            .build();
+
+        GuessClassificationMailet testee = new GuessClassificationMailet();
+        testee.init(config);
+    }
+
+    @Test
+    public void initShouldThrowWhenTimeOutInMsIsNegative() throws Exception {
+        expectedException.expect(MessagingException.class);
+
+        FakeMailetConfig config = FakeMailetConfig.builder()
+            .setProperty(GuessClassificationMailet.SERVICE_URL, "my url")
+            .setProperty(GuessClassificationMailet.TIMEOUT_IN_MS, "-1")
+            .build();
+
+        GuessClassificationMailet testee = new GuessClassificationMailet();
+        testee.init(config);
+    }
+
+    @Test
+    public void initShouldThrowWhenTimeOutInMsIsZero() throws Exception {
+        expectedException.expect(MessagingException.class);
+
+        FakeMailetConfig config = FakeMailetConfig.builder()
+            .setProperty(GuessClassificationMailet.SERVICE_URL, "my url")
+            .setProperty(GuessClassificationMailet.TIMEOUT_IN_MS, "0")
+            .build();
+
+        GuessClassificationMailet testee = new GuessClassificationMailet();
+        testee.init(config);
+    }
+
+    @Test
+    public void initShouldThrowWhenThreadCountIsEmpty() throws Exception {
+        expectedException.expect(MessagingException.class);
+
+        FakeMailetConfig config = FakeMailetConfig.builder()
+            .setProperty(GuessClassificationMailet.SERVICE_URL, "my url")
+            .setProperty(GuessClassificationMailet.THREAD_COUNT, "")
+            .build();
+
+        GuessClassificationMailet testee = new GuessClassificationMailet();
+        testee.init(config);
+    }
+
+    @Test
+    public void initShouldThrowWhenThreadCountIsInvalid() throws Exception {
+        expectedException.expect(MessagingException.class);
+
+        FakeMailetConfig config = FakeMailetConfig.builder()
+            .setProperty(GuessClassificationMailet.SERVICE_URL, "my url")
+            .setProperty(GuessClassificationMailet.THREAD_COUNT, "invalid")
+            .build();
+
+        GuessClassificationMailet testee = new GuessClassificationMailet();
+        testee.init(config);
+    }
+
+    @Test
+    public void initShouldThrowWhenThreadCountIsNegative() throws Exception {
+        expectedException.expect(MessagingException.class);
+
+        FakeMailetConfig config = FakeMailetConfig.builder()
+            .setProperty(GuessClassificationMailet.SERVICE_URL, "my url")
+            .setProperty(GuessClassificationMailet.THREAD_COUNT, "-1")
+            .build();
+
+        GuessClassificationMailet testee = new GuessClassificationMailet();
+        testee.init(config);
+    }
+
+    @Test
+    public void initShouldThrowWhenThreadCountIsZero() throws Exception {
+        expectedException.expect(MessagingException.class);
+
+        FakeMailetConfig config = FakeMailetConfig.builder()
+            .setProperty(GuessClassificationMailet.SERVICE_URL, "my url")
+            .setProperty(GuessClassificationMailet.THREAD_COUNT, "0")
+            .build();
+
+        GuessClassificationMailet testee = new GuessClassificationMailet();
+        testee.init(config);
+    }
+
+    @Test
     public void serviceUrlShouldEqualsPropertyWhenGiven() throws Exception {
         FakeMailetConfig config = FakeMailetConfig.builder()
-                .setProperty("serviceUrl", "my url")
+                .setProperty(GuessClassificationMailet.SERVICE_URL, "my url")
                 .build();
         
         GuessClassificationMailet testee = new GuessClassificationMailet();
@@ -108,9 +217,33 @@ public class GuessClassificationMailetTest {
     }
 
     @Test
+    public void timeoutInMsShouldDefaultToEmpty() throws Exception {
+        GuessClassificationMailet testee = new GuessClassificationMailet();
+
+        testee.init(FakeMailetConfig.builder()
+            .setProperty(GuessClassificationMailet.SERVICE_URL, "my url")
+            .build());
+
+        assertThat(testee.timeoutInMs).isEmpty();
+    }
+
+    @Test
+    public void timeoutInMsShouldEqualsPropertyWhenGiven() throws Exception {
+        GuessClassificationMailet testee = new GuessClassificationMailet();
+
+        int timeout = 10;
+        testee.init(FakeMailetConfig.builder()
+            .setProperty(GuessClassificationMailet.SERVICE_URL, "my url")
+            .setProperty(GuessClassificationMailet.TIMEOUT_IN_MS, String.valueOf(timeout))
+            .build());
+
+        assertThat(testee.timeoutInMs).contains(timeout);
+    }
+
+    @Test
     public void headerNameShouldEqualsDefaultValueWhenNotGiven() throws Exception {
         FakeMailetConfig config = FakeMailetConfig.builder()
-                .setProperty("serviceUrl", "my url")
+                .setProperty(GuessClassificationMailet.SERVICE_URL, "my url")
                 .build();
         
         GuessClassificationMailet testee = new GuessClassificationMailet();
@@ -122,8 +255,8 @@ public class GuessClassificationMailetTest {
     @Test
     public void headerNameShouldEqualsPropertyWhenGiven() throws Exception {
         FakeMailetConfig config = FakeMailetConfig.builder()
-                .setProperty("serviceUrl", "my url")
-                .setProperty("headerName", "my header")
+                .setProperty(GuessClassificationMailet.SERVICE_URL, "my url")
+                .setProperty(GuessClassificationMailet.HEADER_NAME, "my header")
                 .build();
         
         GuessClassificationMailet testee = new GuessClassificationMailet();
@@ -145,13 +278,13 @@ public class GuessClassificationMailetTest {
             .thenThrow(new MessagingException());
         
         GuessClassificationMailet testee = new GuessClassificationMailet();
-        testee.addHeader(mail, "");
+        testee.addHeaders(mail, "");
     }
 
     @Test
     public void addHeaderShouldAddHeaderToTheMessage() throws Exception {
         FakeMailetConfig config = FakeMailetConfig.builder()
-                .setProperty("serviceUrl", "my url")
+                .setProperty(GuessClassificationMailet.SERVICE_URL, "my url")
                 .build();
         GuessClassificationMailet testee = new GuessClassificationMailet();
         testee.init(config);
@@ -160,10 +293,17 @@ public class GuessClassificationMailetTest {
         FakeMail mail = FakeMail.from(message);
         
         String header = "{\"user@james.org\":{\"mailboxId\":\"cfe49390-f391-11e6-88e7-ddd22b16a7b9\",\"mailboxName\":\"JAMES\",\"confidence\":50.07615280151367}}";
-        testee.addHeader(mail, header);
-        
-        assertThat(message.getHeader(GuessClassificationMailet.HEADER_NAME_DEFAULT_VALUE))
-            .contains(header);
+        testee.addHeaders(mail, header);
+
+        PerRecipientHeaders expected = new PerRecipientHeaders();
+        expected.addHeaderForRecipient(PerRecipientHeaders.Header.builder()
+            .name(HEADER_NAME_DEFAULT_VALUE)
+            .value("{\"mailboxId\":\"cfe49390-f391-11e6-88e7-ddd22b16a7b9\",\"mailboxName\":\"JAMES\",\"confidence\":50.07615280151367}")
+            .build(),
+            new MailAddress("user@james.org"));
+
+        assertThat(mail.getPerRecipientSpecificHeaders())
+            .isEqualTo(expected);
     }
 
     @Test
@@ -185,30 +325,85 @@ public class GuessClassificationMailetTest {
                                "\"bcc\":[]}," +
                            "\"subject\":[\"my subject\"]," +
                            "\"textBody\":\"this is my body\"}"),
-                   Times.exactly(1)
-            )
-            .respond(HttpResponse.response(response)
-            );
+                   Times.exactly(1))
+            .respond(HttpResponse.response(response));
 
         FakeMailetConfig config = FakeMailetConfig.builder()
-                .setProperty("serviceUrl", "http://localhost:" + mockServerRule.getPort() + "/email/classification/predict")
+                .setProperty(GuessClassificationMailet.SERVICE_URL, "http://localhost:" + mockServerRule.getPort() + "/email/classification/predict")
                 .build();
-        GuessClassificationMailet testee = new GuessClassificationMailet();
+        GuessClassificationMailet testee = new GuessClassificationMailet(new FakeUUIDGenerator());
         testee.init(config);
-        testee.setUUIDGenerator(new FakeUUIDGenerator());
 
-        MimeMessage message = new MimeMessage(Session.getDefaultInstance(new Properties()));
-        message.addFrom(new InternetAddress[] { new InternetAddress("from@james.org", "From") });
-        message.setRecipients(RecipientType.TO, new InternetAddress[] { new InternetAddress("to@james.org") });
-        message.setRecipients(RecipientType.CC, new InternetAddress[] { new InternetAddress("cc@james.org") });
-        message.setSubject("my subject");
-        message.setContent("this is my body", "text/plain");
+        MimeMessage message = MimeMessageBuilder.mimeMessageBuilder()
+            .addFrom(new InternetAddress("from@james.org", "From"))
+            .addToRecipient("to@james.org")
+            .addCcRecipient("cc@james.org")
+            .setSubject("my subject")
+            .setText("this is my body")
+            .build();
         FakeMail mail = FakeMail.from(message);
         mail.setRecipients(ImmutableList.of(new MailAddress("to@james.org"), new MailAddress("cc@james.org")));
 
         testee.service(mail);
 
-        assertThat(message.getHeader(GuessClassificationMailet.HEADER_NAME_DEFAULT_VALUE))
-            .contains(response);
+        PerRecipientHeaders expected = new PerRecipientHeaders();
+        expected.addHeaderForRecipient(PerRecipientHeaders.Header.builder()
+                .name(HEADER_NAME_DEFAULT_VALUE)
+                .value("{\"mailboxId\":\"cfe49390-f391-11e6-88e7-ddd22b16a7b9\",\"mailboxName\":\"JAMES\",\"confidence\":50.07615280151367}")
+                .build(),
+            new MailAddress("user@james.org"));
+        assertThat(mail.getPerRecipientSpecificHeaders()).isEqualTo(expected);
     }
+
+    @Test
+    public void serviceShouldNotAddHeadersWhenTimeoutExceeded() throws Exception {
+        int timeoutInMs = 10;
+
+        mockServerClient
+            .when(HttpRequest.request()
+                    .withMethod("POST")
+                    .withPath("/email/classification/predict")
+                    .withQueryStringParameter(new Parameter("recipients", "to@james.org", "cc@james.org"))
+                    .withBody("{\"messageId\":\"524e4f85-2d2f-4927-ab98-bd7a2f689773\"," +
+                        "\"from\":[{\"name\":\"From\",\"address\":\"from@james.org\"}]," +
+                        "\"recipients\":{\"to\":[{\"name\":null,\"address\":\"to@james.org\"}]," +
+                        "\"cc\":[{\"name\":null,\"address\":\"cc@james.org\"}]," +
+                        "\"bcc\":[]}," +
+                        "\"subject\":[\"my subject\"]," +
+                        "\"textBody\":\"this is my body\"}"),
+                Times.exactly(1))
+            .callback(new AwaitCallback(2 * timeoutInMs));
+
+        FakeMailetConfig config = FakeMailetConfig.builder()
+            .setProperty(GuessClassificationMailet.SERVICE_URL, "http://localhost:" + mockServerRule.getPort() + "/email/classification/predict")
+            .setProperty(GuessClassificationMailet.TIMEOUT_IN_MS, String.valueOf(timeoutInMs))
+            .build();
+        GuessClassificationMailet testee = new GuessClassificationMailet(new FakeUUIDGenerator());
+        testee.init(config);
+
+        MimeMessage message = MimeMessageBuilder.mimeMessageBuilder()
+            .addFrom(new InternetAddress("from@james.org", "From"))
+            .addToRecipient("to@james.org")
+            .addCcRecipient("cc@james.org")
+            .setSubject("my subject")
+            .setText("this is my body")
+            .build();
+        FakeMail mail = FakeMail.from(message);
+        mail.setRecipients(ImmutableList.of(new MailAddress("to@james.org"), new MailAddress("cc@james.org")));
+
+        testee.service(mail);
+
+        assertThat(mail.getPerRecipientSpecificHeaders()).isEqualTo(new PerRecipientHeaders());
+    }
+
+    static class AwaitCallback extends HttpCallback {
+        AwaitCallback(int timeoutInMs) {
+            try {
+                Thread.sleep(timeoutInMs);
+            } catch (InterruptedException e) {
+                Throwables.propagate(e);
+            }
+        }
+    }
+
 }
