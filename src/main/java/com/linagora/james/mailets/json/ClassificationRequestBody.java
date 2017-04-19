@@ -25,6 +25,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import javax.mail.MessagingException;
+import javax.mail.internet.ContentType;
 import javax.mail.internet.MimeMessage;
 
 import org.apache.james.mime4j.dom.Message;
@@ -64,7 +65,10 @@ public class ClassificationRequestBody {
 
     private static Message toMime4jMessage(Mail mail) throws IOException, MessagingException {
         ByteArrayOutputStream rawMessage = new ByteArrayOutputStream();
-        mail.getMessage().writeTo(rawMessage);
+        MimeMessage message = mail.getMessage();
+        ContentType contentType = new ContentType(message.getContentType());
+        String charset = contentType.getParameter("charset");
+        message.writeTo(rawMessage);
 
         return MessageBuilder
                 .create()

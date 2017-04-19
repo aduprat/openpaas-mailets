@@ -92,6 +92,7 @@ import com.linagora.james.mailets.json.UUIDGenerator;
 public class GuessClassificationMailet extends GenericMailet {
 
     @VisibleForTesting static final Logger LOGGER = LoggerFactory.getLogger(GuessClassificationMailet.class);
+    @VisibleForTesting static final String JSON_CONTENT_TYPE_UTF8 = "application/json; charset=UTF-8";
 
     static final String SERVICE_URL = "serviceUrl";
     static final String HEADER_NAME = "headerName";
@@ -188,7 +189,7 @@ public class GuessClassificationMailet extends GenericMailet {
     private Optional<String> getClassificationGuess(Mail mail) {
         try (CloseableHttpClient httpClient = HttpClients.createDefault()) {
             HttpPost post = new HttpPost(serviceUrlWithQueryParameters(mail.getRecipients()));
-            post.addHeader("Content-Type", "application/json");
+            post.addHeader("Content-Type", JSON_CONTENT_TYPE_UTF8);
             post.setEntity(new StringEntity(asJson(mail)));
             
             HttpEntity entity = httpClient.execute(post).getEntity();
